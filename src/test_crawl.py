@@ -32,7 +32,19 @@ class TestCrawl(unittest.TestCase):
         actual = get_h1_from_html(input_body)
         expected = "Test Title"
         self.assertEqual(actual, expected)
+    
+    def test_get_h1_no_h1(self):
+        input_body = "<html><body><h2>No H1 here</h2></body></html>"
+        actual = get_h1_from_html(input_body)
+        expected = ""
+        self.assertEqual(actual, expected)
 
+    def test_get_first_paragraph_from_html_no_paragraph(self):
+        input_body = "<html><body><h1>No paragraph here</h1></body></html>"
+        actual = get_first_paragraph_from_html(input_body)
+        expected = ""
+        self.assertEqual(actual, expected)
+        
     def test_get_first_paragraph_from_html_main_priority(self):
         input_body = '''<html><body>
             <p>Outside paragraph.</p>
