@@ -1,5 +1,5 @@
 from urllib.parse import urlparse
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup # pyright: ignore[reportMissingModuleSource]
 
 def normalize_url(url):
     parsed = urlparse(url)
@@ -45,5 +45,18 @@ def get_images_from_html(html, base_url):
             raise ValueError(f"Invalid image URL found: {src}")
         images.append(src)
     return images
+
+def extract_page_data(html, page_url):
+    title = get_h1_from_html(html)
+    first_paragraph = get_first_paragraph_from_html(html)
+    urls = get_urls_from_html(html, page_url)
+    images = get_images_from_html(html, page_url)
+    return {
+        "url": page_url,
+        "h1": title,
+        "first_paragraph": first_paragraph,
+        "outgoing_links": urls,
+        "image_urls": images
+    }
         
 

@@ -4,7 +4,8 @@ from crawl import (
     get_h1_from_html, 
     get_first_paragraph_from_html,
     get_urls_from_html,
-    get_images_from_html
+    get_images_from_html,
+    extract_page_data
 )
 
 
@@ -143,6 +144,154 @@ class TestCrawl(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             get_images_from_html(input_body, input_url)
         self.assertEqual(str(cm.exception), expected)
+
+
+    def test_extract_page_data_basic(self):
+        input_url = "https://blog.boot.dev"
+        input_body = '''<html><body>
+            <h1>Test Title</h1>
+            <p>This is the first paragraph.</p>
+            <a href="/link1">Link 1</a>
+            <img src="/image1.jpg" alt="Image 1">
+        </body></html>'''
+        actual = extract_page_data(input_body, input_url)
+        expected = {
+            "url": "https://blog.boot.dev",
+            "h1": "Test Title",
+            "first_paragraph": "This is the first paragraph.",
+            "outgoing_links": ["https://blog.boot.dev/link1"],
+            "image_urls": ["https://blog.boot.dev/image1.jpg"]
+        }
+        self.assertEqual(actual, expected)
+
+    def test_extract_page_data_no_h1_no_paragraph_no_links_no_images(self):
+        input_url = "https://blog.boot.dev"
+        input_body = "<html><body></body></html>"
+        actual = extract_page_data(input_body, input_url)
+        expected = {
+            "url": input_url,
+            "h1": "",
+            "first_paragraph": "",
+            "outgoing_links": [],
+            "image_urls": []
+        }
+        self.assertEqual(actual, expected)
+
+    def test_extract_page_data_multiple_links_and_images(self):
+        input_url = "https://blog.boot.dev"
+        input_body = '''<html><body>
+            <h1>Title</h1>
+            <p>Paragraph</p>
+            <a href="/link1">Link 1</a>
+            <a href="https://external.com/page">External</a>
+            <img src="/img1.jpg" alt="Img1">
+            <img src="https://external.com/img2.jpg" alt="Img2">
+        </body></html>'''
+        actual = extract_page_data(input_body, input_url)
+        expected = {
+            "url": input_url,
+            "h1": "Title",
+            "first_paragraph": "Paragraph",
+            "outgoing_links": [
+                "https://blog.boot.dev/link1",
+                "https://external.com/page"
+            ],
+            "image_urls": [
+                "https://blog.boot.dev/img1.jpg",
+                "https://external.com/img2.jpg"
+            ]
+        }
+        self.assertEqual(actual, expected)
+
+    def test_extract_page_data_main_paragraph_priority(self):
+        input_url = "https://blog.boot.dev"
+        input_body = '''<html><body>
+            <main><p>Main paragraph.</p></main>
+            <p>Other paragraph.</p>
+        </body></html>'''
+        actual = extract_page_data(input_body, input_url)
+        expected = {
+            "url": input_url,
+            "h1": "",
+            "first_paragraph": "Main paragraph.",
+            "outgoing_links": [],
+            "image_urls": []
+        }
+        self.assertEqual(actual, expected)
+
+    def test_extract_page_data_invalid_link(self):
+        input_url = "https://blog.boot.dev"
+        input_body = "<html><body><a href='invalid'>Bad Link</a></body></html>"
+        with self.assertRaises(ValueError) as cm:
+            extract_page_data(input_body, input_url)
+        self.assertEqual(str(cm.exception), "Invalid URL found: invalid")
+
+    def test_extract_page_data_invalid_image(self):
+        input_url = "https://blog.boot.dev"
+        input_body = "<html><body><img src='invalid' alt='bad'></body></html>"
+        with self.assertRaises(ValueError) as cm:
+            extract_page_data(input_body, input_url)
+        self.assertEqual(str(cm.exception), "Invalid image URL found: invalid")
+
+    def test_extract_page_data_empty_html(self):
+        input_url = "https://blog.boot.dev"
+        input_body = ""
+        actual = extract_page_data(input_body, input_url)
+        expected = {
+            "url": input_url,
+            "h1": "",
+            "first_paragraph": "",
+            "outgoing_links": [],
+            "image_urls": []
+        }
+        self.assertEqual(actual, expected)
+
+    def test_extract_page_data_duplicate_tags(self):
+        input_url = "https://blog.boot.dev"
+        input_body = '''<html><body>
+            <h1>First Title</h1>
+            <h1>Second Title</h1>
+            <p>First paragraph.</p>
+            <p>Second paragraph.</p>
+            <a href="/link1">Link 1</a>
+            <a href="/link2">Link 2</a>
+            <img src="/img1.jpg" alt="Img1">
+            <img src="/img2.jpg" alt="Img2">
+        </body></html>'''
+        actual = extract_page_data(input_body, input_url)
+        expected = {
+            "url": input_url,
+            "h1": "First Title",
+            "first_paragraph": "First paragraph.",
+            "outgoing_links": [
+                "https://blog.boot.dev/link1",
+                "https://blog.boot.dev/link2"
+            ],
+            "image_urls": [
+                "https://blog.boot.dev/img1.jpg",
+                "https://blog.boot.dev/img2.jpg"
+            ]
+        }
+        self.assertEqual(actual, expected)
+
+    def test_extract_page_data_unusual_but_valid(self):
+        input_url = "https://blog.boot.dev"
+        input_body = '''<html><body>
+            <h1></h1>
+            <main></main>
+            <p></p>
+            <a href="/link"></a>
+            <img src="/img.jpg">
+        </body></html>'''
+        actual = extract_page_data(input_body, input_url)
+        expected = {
+            "url": input_url,
+            "h1": "",
+            "first_paragraph": "",
+            "outgoing_links": ["https://blog.boot.dev/link"],
+            "image_urls": ["https://blog.boot.dev/img.jpg"]
+        }
+        self.assertEqual(actual, expected)
 
 if __name__ == "__main__":
     unittest.main()
