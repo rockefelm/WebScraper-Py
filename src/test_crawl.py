@@ -112,5 +112,37 @@ class TestCrawl(unittest.TestCase):
         expected = ["https://blog.boot.dev/logo.png"]
         self.assertEqual(actual, expected)
 
+    def test_get_images_from_html_absolute(self):
+        input_url = "https://blog.boot.dev"
+        input_body = ('<html><body>'
+                      '<img src="https://blog.boot.dev/logo.png" alt="Logo">'
+                      '</body></html>')
+        actual = get_images_from_html(input_body, input_url)
+        expected = ["https://blog.boot.dev/logo.png"]
+        self.assertEqual(actual, expected)
+
+    def test_get_images_from_html_absolute_and_relative_mixed(self):
+        input_url = "https://blog.boot.dev"
+        input_body = ('<html><body>'
+                      '<img src="/logo.png" alt="logo">'
+                      '<img src="https://blog.boot.dev/banner.png alt="banner">'
+                      '</body></html>')
+        actual = get_images_from_html(input_bopy, input_url)
+        expected = [
+            "https://blog.boot.dev/logo.png",
+            "https://blog.boot.dev/banner.png"
+        ]
+        self.assertEqual(actual, expected)
+    
+    def test_get_images_from_html_invalid(self):
+        input_url = "https://blog.boot.dev"
+        input_body = ('<html><body>'
+                      '<img src="invalid" alt="invalid">'
+                      '</body></html>')
+        expected = "Invalid image URL found: invalid"
+        with self.assertRaises(ValueError) as cm:
+            get_images_from_html(input_body, input_url)
+        self.assertEqual(str(cm.exception), expected)
+        
 if __name__ == "__main__":
     unittest.main()

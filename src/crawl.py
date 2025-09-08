@@ -35,6 +35,16 @@ def get_urls_from_html(html, base_url):
     return url
 
 def get_images_from_html(html, base_url):
-    
+    images = []
+    soup = BeautifulSoup(html, 'html.parser')
+    img_tags = soup.find_all('img', src=True)
+    for img in img_tags:
+        src = img['src']
+        if src.startswith('/'):
+            src = base_url + src
+        elif not src.startswith('http'):
+            raise ValueError(f"Invalid image URL found: {src}")
+        images.append(src)
+    return images
         
 
