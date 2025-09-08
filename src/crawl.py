@@ -29,7 +29,6 @@ def get_urls_from_html(html, base_url):
         if href.startswith('/'):
             href = base_url + href
         elif not href.startswith('http'):
-            print(f"Invalid URL found: {href}")
             raise ValueError(f"Invalid URL found: {href}")
         url.append(href)
     return url

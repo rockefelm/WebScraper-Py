@@ -125,9 +125,9 @@ class TestCrawl(unittest.TestCase):
         input_url = "https://blog.boot.dev"
         input_body = ('<html><body>'
                       '<img src="/logo.png" alt="logo">'
-                      '<img src="https://blog.boot.dev/banner.png alt="banner">'
+                      '<img src="https://blog.boot.dev/banner.png" alt="banner">'
                       '</body></html>')
-        actual = get_images_from_html(input_bopy, input_url)
+        actual = get_images_from_html(input_body, input_url)
         expected = [
             "https://blog.boot.dev/logo.png",
             "https://blog.boot.dev/banner.png"
@@ -143,6 +143,6 @@ class TestCrawl(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             get_images_from_html(input_body, input_url)
         self.assertEqual(str(cm.exception), expected)
-        
+
 if __name__ == "__main__":
     unittest.main()
