@@ -1,9 +1,9 @@
 import sys
 import importlib.util
 
-get_html_spec = importlib.util.spec_from_file_location("get_html", "./src/get_html.py")
-get_html = importlib.util.module_from_spec(get_html_spec)
-get_html_spec.loader.exec_module(get_html)
+crawler_spec = importlib.util.spec_from_file_location("crawl", "./src/crawl.py")
+crawler = importlib.util.module_from_spec(crawler_spec)
+crawler_spec.loader.exec_module(crawler)
 
 
 def main():
@@ -14,8 +14,18 @@ def main():
     elif len(sys.argv) > 2:
         print("too many arguments provided")
         sys.exit(1)
-    html = get_html.get_html(sys.argv[1])
-    print(html)
+    
+    url = sys.argv[1]
+
+    print(f"Starting crawl of: {url}")
+
+    page_data = crawler.crawl_page(url)
+
+    print(f"Found {len(page_data)} pages:")
+    for page in page_data.values():
+        print(f"- {page['url']}: {len(page['outgoing_links'])} outgoing links")
+
+    sys.exit(0)
 
 
 if __name__ == "__main__":
