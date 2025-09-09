@@ -1,9 +1,5 @@
 import sys
-import importlib.util
-
-crawler_spec = importlib.util.spec_from_file_location("crawl", "./src/crawl.py")
-crawler = importlib.util.module_from_spec(crawler_spec)
-crawler_spec.loader.exec_module(crawler)
+from crawl import crawl_page
 
 
 def main():
@@ -19,7 +15,7 @@ def main():
 
     print(f"Starting crawl of: {url}")
 
-    page_data = crawler.crawl_page(url)
+    page_data = crawl_page(url)
 
     print(f"Found {len(page_data)} pages:")
     for page in page_data.values():
