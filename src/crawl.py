@@ -26,20 +26,32 @@ def get_urls_from_html(html, base_url):
     soup = BeautifulSoup(html, 'html.parser')
     urls = []
     for a in soup.find_all('a', href=True):
-        href = a['href']
-        if not href.startswith(('http', '/')):
-            raise ValueError(f"Invalid URL found: {href}")
-        urls.append(urljoin(base_url, href))
+        href = a['href'] or ""
+        if href.startswith('#'):
+            continue
+        if href.startswith(('mailto:', 'javascript:')):
+            continue
+        abs_url = urljoin(base_url, href)
+        parsed = urlparse(abs_url)
+        if parsed.scheme not in ('http', 'https'):
+            continue
+        urls.append(abs_url)
     return urls
 
 def get_images_from_html(html, base_url):
     images = []
     soup = BeautifulSoup(html, 'html.parser')
     for img in soup.find_all('img', src=True):
-        src = img['src']
-        if not src.startswith(('http', '/')):
-            raise ValueError(f"Invalid image URL found: {src}")
-        images.append(urljoin(base_url, src))
+        src = img['src'] or ""
+        if src.startswith("#"):
+            continue
+        if src.startswith(("mailto:", "javascript:", "data:")):
+            continue
+        abs_url = urljoin(base_url, src)
+        parsed = urlparse(abs_url)
+        if parsed.scheme not in ("http", "https"):
+            continue
+        images.append(abs_url)
     return images
 
 def extract_page_data(html, page_url):
@@ -57,14 +69,17 @@ def extract_page_data(html, page_url):
     
 class AsyncCrawler:
 
-    def __init__(self, base_url, page_data):
+    def __init__(self, base_url, page_data=None, max_concurrency=1, max_pages=30):
         self.base_url = base_url
         self.base_domain = urlparse(base_url).netloc
-        self.page_data = page_data
+        self.page_data = page_data if page_data is not None else {}
         self.lock = asyncio.Lock()
-        self.max_concurrency = 5
+        self.max_concurrency = max_concurrency
+        self.max_pages = max_pages
         self.semaphore = asyncio.Semaphore(self.max_concurrency)
         self.session = None
+        self.should_stop = False
+        self.all_tasks = set()
 
     async def __aenter__(self):
         self.session = aiohttp.ClientSession()
@@ -74,7 +89,15 @@ class AsyncCrawler:
         await self.session.close()
 
     async def add_page_visit(self, normalized_url):
+        if self.should_stop:
+            return False 
         async with self.lock:
+            if len(self.page_data) >= self.max_pages:
+                self.should_stop = True
+                print("Reached maximum number of pages to crawl.")
+                for task in list(self.all_tasks):
+                    task.cancel()
+                return False
             if normalized_url in self.page_data:
                 return False
             self.page_data[normalized_url] = {}  # placeholder
@@ -101,6 +124,8 @@ class AsyncCrawler:
       
 
     async def crawl_page(self, current_url=None):
+        if self.should_stop:
+            return
         if current_url is None:
             current_url = self.base_url
         
@@ -126,16 +151,25 @@ class AsyncCrawler:
         async with self.lock:
             self.page_data[normalized_url] = page_info
 
+        tasks = []
         children = [next_url for next_url in page_info['outgoing_links'] if not next_url.endswith('.xml')]
-        tasks = [asyncio.create_task(self.crawl_page(next_url))
-                 for next_url in children]
+        if self.should_stop:
+            return
+        for next_url in children:
+            if self.should_stop:
+                break
+            task = asyncio.create_task(self.crawl_page(next_url))
+            self.all_tasks.add(task)
+            task.add_done_callback(lambda done: self.all_tasks.discard(done))
+            tasks.append(task)
+
         if tasks:
-            await asyncio.gather(*tasks)
+            await asyncio.gather(*tasks, return_exceptions=True)
 
     async def crawl(self):
         await self.crawl_page(self.base_url)
         return self.page_data
 
-async def crawl_site_async(base_url):
-    async with AsyncCrawler(base_url, {}) as crawler:
+async def crawl_site_async(base_url, max_concurrency=1, max_pages=30):
+    async with AsyncCrawler(base_url, None, max_concurrency, max_pages) as crawler:
         return await crawler.crawl()       
