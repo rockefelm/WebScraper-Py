@@ -105,7 +105,9 @@ class AsyncCrawler:
 
     async def get_html(self, url):
         try:
-            async with self.session.get(url) as response:
+            async with self.session.get(
+                url, headers={"User-Agent": "BootCrawler/1.0"}
+                ) as response:
                 if response.status > 399:
                     raise Exception(f"got HTTP error: {response.status} {response.reason}")
                 content_type = response.headers.get("content-type", "")

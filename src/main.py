@@ -1,5 +1,8 @@
 import sys
+import asyncio
 from crawl import crawl_site_async
+from csv_report import write_csv_report
+
 
 
 async def main():
@@ -23,11 +26,12 @@ async def main():
         max_pages = int(sys.argv[3])
         page_data = await crawl_site_async(base_url, max_concurrency, max_pages)
 
-    for url in page_data.keys():
-        print(url)
+    print(f"Crawling complete. Found {len(page_data)} pages.")
 
+    write_csv_report(page_data)
+
+    return 0
 
 if __name__ == "__main__":
-    import asyncio
     exit_code = asyncio.run(main())
     sys.exit(exit_code)
